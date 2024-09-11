@@ -1,1 +1,4 @@
+streamlitnumpy
+pandas
+matplotlib
 streamlit
