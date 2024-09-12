@@ -24,7 +24,7 @@ def add_match(result_str):
     result = result_str.split()
     date = datetime.today().strftime('%Y-%m-%d')
     player1, player2 = result[0], result[1]
-    sets = result[3:]  # Remaining scores
+    sets = result[2:]  # Remaining scores
     sets.extend([""] * (5 - len(sets)))  # Pad with empty strings if fewer than 5 sets
     
     new_match = pd.DataFrame([[match_id, date, player1, player2, *sets]], 
@@ -88,12 +88,18 @@ def update_elo(match_id, player1, player2):
 
     return elo1_new, elo2_new, delta1, delta2
 
-def display_elo():
+def display_elo(player1=None, player2=None, delta1=None, delta2=None):
+    
+    # Create a df with position, name and ELO
+
     elo_json = load_elo()
     elo_data = [(0, k, v[-1][1]) for k,v in elo_json.items()]
     elo_df = pd.DataFrame(elo_data,columns=["Posizione", "Nome", "ELO"])
     elo_df = elo_df.sort_values(by="ELO", ascending=False)
     elo_df.Posizione = range(1, len(elo_df)+1)
+
+    elo_df.ELO = elo_df.ELO.apply(lambda x: f"{x:.2f}")
+
     return elo_df
 
 def plot_elo():
@@ -112,29 +118,37 @@ def plot_elo():
         ax.legend()
     return fig
 
-    
+def display_matches():
+    try:
+        df = pd.read_csv(matches_file)
+    except FileNotFoundError:
+        df = pd.DataFrame(columns=["MatchID", "Date","Player1", "Player2", 
+                                   "Set1", "Set2", "Set3", "Set4", "Set5"])
+    return df.tail(20)
 
 #############################################
-############### VISUALIZATION ###############
+############### VISUALISATION ###############
 #############################################
 
 st.title("SmartPong")
 
-st.write("## Nuova partita")
+st.write("## New match")
 with st.form("match_form"):
-    result_str = st.text_input("Nuova partita: ")
+    result_str = st.text_input("New match result (in the form '<Winner> <Loser> <ResultSet1> <ResultSet2> <ResultSet3> <ResultSet4> <ResultSet5>')")
     submit = st.form_submit_button("Submit")
 
     if submit:
         match_id, player1, player2 = add_match(result_str)
         elo1_new, elo2_new, delta1, delta2 = update_elo(match_id, player1, player2)
-        st.write(f"Partita {match_id} aggiunta")
-        st.write(f"Nuovo ELO per {player1}: {elo1_new:.2f} ({delta1:+.2f})")
-        st.write(f"Nuovo ELO per {player2}: {elo2_new:.2f} ({delta2:+.2f})")
+        st.write(f"Match {match_id} added")
+        st.write(f"New ELO for {player1}: {elo1_new:.2f} ({delta1:+.2f})")
+        st.write(f"New ELO for {player2}: {elo2_new:.2f} ({delta2:+.2f})")
 
         #st.table(display_elo())
 
-st.write("## Classifica ELO")
+st.write("## ELO ranking")
 st.dataframe(display_elo(), hide_index=True)
-
 st.pyplot(plot_elo())
+
+st.write("## Last 20 matches")
+st.dataframe(display_matches(), hide_index=True)
