@@ -4,17 +4,19 @@ from datetime import datetime
 import math
 import json
 import matplotlib.pyplot as plt
+import numpy as np
 
 # File to store player ELOs
 elo_file = "elo_rankings.json"
 # File to store the matches
 matches_file = "matches.csv"
 
-def add_match(result_str, match_id_update=None, match_date_update=None):
+def add_or_update_match(result, mid_update=-1):
 
-    if match_id_update:
+
+    if mid_update > 0:
         df = pd.read_csv(matches_file)
-        match_id = match_id_update
+        match_id = str(mid_update)
 
     else:
         # Check if file exists, otherwise create it
@@ -22,27 +24,35 @@ def add_match(result_str, match_id_update=None, match_date_update=None):
             df = pd.read_csv(matches_file)
             match_id = df["MatchID"].max() + 1
         except FileNotFoundError:
-            df = pd.DataFrame(columns=["MatchID", "Date","Player1", "Player2", 
-                                    "Set1", "Set2", "Set3", "Set4", "Set5"])
+            df = pd.DataFrame(
+                columns=["MatchID", "Date","Player1", "Player2", 
+                         "Set1", "Set2", "Set3", "Set4", "Set5"],
+                dtype=[np.int64, str, str, str,
+                       str, str, str, str, str])
             match_id = 1
     
-    # Parse result string and create match entry
-    result = result_str.split()
-    if match_date_update:
-        date = match_date_update
+    player1, player2 = result['p1'], result['p2']
+    sets = [result[f's{x}'] for x in range(1,6)]
+    
+    if mid_update > 0:
+        
+        df.loc[df.MatchID==np.int64(mid_update), "Player1"] = player1
+        df.loc[df.MatchID==np.int64(mid_update), "Player2"] = player2
+        df.loc[df.MatchID==np.int64(mid_update), "Set1"] = sets[0]
+        df.loc[df.MatchID==np.int64(mid_update), "Set2"] = sets[1]
+        df.loc[df.MatchID==np.int64(mid_update), "Set3"] = sets[2]
+        df.loc[df.MatchID==np.int64(mid_update), "Set4"] = sets[3]
+        df.loc[df.MatchID==np.int64(mid_update), "Set5"] = sets[4]
+
     else:
-        date = datetime.today().strftime('%Y-%m-%d')
-    player1, player2 = result[0], result[1]
-    sets = result[2:]  # Remaining scores
-    sets.extend([""] * (5 - len(sets)))  # Pad with empty strings if fewer than 5 sets
+        date = str(datetime.today().strftime('%Y-%m-%d'))
+        new_match = pd.DataFrame([[match_id, date, player1, player2, *sets]], 
+                                 columns=["MatchID", "Date", "Player1", "Player2", "Set1", "Set2", "Set3", "Set4", "Set5"])
     
-    new_match = pd.DataFrame([[match_id, date, player1, player2, *sets]], 
-                             columns=["MatchID", "Date", "Player1", "Player2", "Set1", "Set2", "Set3", "Set4", "Set5"])
-    
-    df = pd.concat([df, new_match], ignore_index=True)
+        df = pd.concat([df, new_match], ignore_index=True)
     df.to_csv(matches_file, index=False)
 
-    return match_id, player1, player2
+    return match_id
 
 def load_matches():
     return pd.read_csv(matches_file)
