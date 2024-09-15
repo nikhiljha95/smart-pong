@@ -8,10 +8,12 @@ import numpy as np
 
 # File to store player ELOs
 elo_file = "elo_rankings.json"
+elo_doubles_file = "elo_rankings_doubles.json"
 # File to store the matches
 matches_file = "matches.csv"
+matches_doubles_file = "matches_doubles.csv"
 
-def add_or_update_match(result, mid_update=-1):
+def add_or_update_match(result, mid_update=-1, singles=True):
 
 
     if mid_update > 0:
@@ -21,67 +23,113 @@ def add_or_update_match(result, mid_update=-1):
     else:
         # Check if file exists, otherwise create it
         try:
-            df = pd.read_csv(matches_file)
+            if singles:
+                df = pd.read_csv(matches_file)
+            else:
+                df = pd.read_csv(matches_doubles_file)
             match_id = df["MatchID"].max() + 1
         except FileNotFoundError:
-            df = pd.DataFrame(
-                columns=["MatchID", "Date","Player1", "Player2", 
-                         "Set1", "Set2", "Set3", "Set4", "Set5"])
+            if singles:
+                df = pd.DataFrame(
+                    columns=["MatchID", "Date","Player1", "Player2", 
+                            "Set1", "Set2", "Set3", "Set4", "Set5"])
+            else:
+                df = pd.DataFrame(
+                    columns=["MatchID", "Date",
+                             "Player11", "Player12",
+                             "Player21", "Player22",
+                            "Set1", "Set2", "Set3", "Set4", "Set5"])
+                
             df.MatchID.astype(np.int64)
             df.Date.astype(str)
             match_id = 1
     
-    player1, player2 = result['p1'], result['p2']
+    if singles:
+        player1, player2 = result['p1'], result['p2']
+    else:
+        player11, player12, player21, player22 = result['p11'], result['p12'],result['p21'], result['p22']
     sets = [result[f's{x}'] for x in range(1,6)]
     
     if mid_update > 0:
         
-        df.loc[df.MatchID==np.int64(mid_update), "Player1"] = player1
-        df.loc[df.MatchID==np.int64(mid_update), "Player2"] = player2
-        df.loc[df.MatchID==np.int64(mid_update), "Set1"] = sets[0]
-        df.loc[df.MatchID==np.int64(mid_update), "Set2"] = sets[1]
-        df.loc[df.MatchID==np.int64(mid_update), "Set3"] = sets[2]
-        df.loc[df.MatchID==np.int64(mid_update), "Set4"] = sets[3]
-        df.loc[df.MatchID==np.int64(mid_update), "Set5"] = sets[4]
+        if singles:
+            df.loc[df.MatchID==np.int64(mid_update), "Player1"] = player1
+            df.loc[df.MatchID==np.int64(mid_update), "Player2"] = player2
+            df.loc[df.MatchID==np.int64(mid_update), "Set1"] = sets[0]
+            df.loc[df.MatchID==np.int64(mid_update), "Set2"] = sets[1]
+            df.loc[df.MatchID==np.int64(mid_update), "Set3"] = sets[2]
+            df.loc[df.MatchID==np.int64(mid_update), "Set4"] = sets[3]
+            df.loc[df.MatchID==np.int64(mid_update), "Set5"] = sets[4]
+        else:
+            df.loc[df.MatchID==np.int64(mid_update), "Player11"] = player11
+            df.loc[df.MatchID==np.int64(mid_update), "Player12"] = player12
+            df.loc[df.MatchID==np.int64(mid_update), "Player21"] = player21
+            df.loc[df.MatchID==np.int64(mid_update), "Player22"] = player22
+            df.loc[df.MatchID==np.int64(mid_update), "Set1"] = sets[0]
+            df.loc[df.MatchID==np.int64(mid_update), "Set2"] = sets[1]
+            df.loc[df.MatchID==np.int64(mid_update), "Set3"] = sets[2]
+            df.loc[df.MatchID==np.int64(mid_update), "Set4"] = sets[3]
+            df.loc[df.MatchID==np.int64(mid_update), "Set5"] = sets[4]
 
     else:
         date = str(datetime.today().strftime('%Y-%m-%d'))
-        new_match = pd.DataFrame([[match_id, date, player1, player2, *sets]], 
-                                 columns=["MatchID", "Date", "Player1", "Player2", "Set1", "Set2", "Set3", "Set4", "Set5"])
+        if singles:
+            new_match = pd.DataFrame([[match_id, date, player1, player2, *sets]], 
+                                    columns=["MatchID", "Date", "Player1", "Player2", "Set1", "Set2", "Set3", "Set4", "Set5"])
+        else:
+            new_match = pd.DataFrame(
+                [[match_id, date, player11, player12, player21, player22, *sets]],
+                columns=[
+                    "MatchID", "Date",
+                    "Player11", "Player12",
+                    "Player21", "Player22",
+                    "Set1", "Set2", "Set3", "Set4", "Set5"])
     
         df = pd.concat([df, new_match], ignore_index=True)
     df.to_csv(matches_file, index=False)
 
     return match_id
 
-def load_matches():
-    return pd.read_csv(matches_file)
-
+def load_matches(singles=True):
+    if singles:
+        return pd.read_csv(matches_file)
+    else:
+        return pd.read_csv(matches_doubles_file)
 # Initialize or load existing ELO data
-def load_elo():
-    
+def load_elo(singles=True):
     try:
-        elo = json.loads(open(elo_file, 'r').read())
+        if singles:
+            elo = json.loads(open(elo_file, 'r').read())
+        else:
+            elo = json.loads(open(elo_doubles_file, 'r').read())
     except FileNotFoundError:
         elo = {}
     return elo
 
 
 # Update ELO based on match results
-def update_elo(match_id, player1, player2):
+def update_elo(match_id, players, singles=True):
     K = 32  # ELO constant
 
-    elo = load_elo()
+    elo = load_elo(singles)
+
+    for p in players:
+        if p not in elo:
+            elo[p] = [(-1, 500.)]
     
-    if player1 not in elo:
-        elo[player1] = [(-1, 500.)]
-    if player2 not in elo:
-        elo[player2] = [(-1, 500.)]
-    
-    elo1 = elo[player1][-1][1]
-    elo2 = elo[player2][-1][1]
+    elos = []
+    for p in players:
+        elos.append(elo[p][-1][1])
     
     # Calculate expected score
+
+    if singles:
+        elo1 = elos[0]
+        elo2 = elos[1]
+    else:
+        elo1 = np.mean([elos[0], elos[1]])
+        elo2 = np.mean([elos[2], elos[3]])
+
     expected1 = 1 / (1 + math.pow(10, (elo2 - elo1) / 400))
     expected2 = 1 / (1 + math.pow(10, (elo1 - elo2) / 400))
     
@@ -94,24 +142,45 @@ def update_elo(match_id, player1, player2):
     delta2 = K * (actual2 - expected2)
 
     # Update ELO
-    elo1_new = elo1 + delta1
-    elo2_new = elo2 + delta2
-    
-    elo[player1].append((int(match_id), elo1_new))
-    elo[player2].append((int(match_id), elo2_new))
+    if singles:
+        elo1_new = elos[0] + delta1
+        elo2_new = elos[1] + delta2
+        elos_new = [elo1_new, elo2_new]
+        elo[players[0]].append((int(match_id), elo1_new))
+        elo[players[1]].append((int(match_id), elo2_new))
+    else:
+        elo11_new = elos[0] + delta1
+        elo12_new = elos[1] + delta1
+        elo21_new = elos[2] + delta2
+        elo22_new = elos[3] + delta2
+        elos_new = [elo11_new, elo12_new,elo21_new, elo22_new]
+        elo[players[0]].append((int(match_id), elo11_new))
+        elo[players[1]].append((int(match_id), elo12_new))
+        elo[players[2]].append((int(match_id), elo21_new))
+        elo[players[3]].append((int(match_id), elo22_new))
 
-    f = open(elo_file, 'w')
+    if singles:
+        f = open(elo_file, 'w')
+    else:
+        f = open(elo_doubles_file, 'w')
     f.write(json.dumps(elo))
     f.close()
 
-    st.session_state['p1'] = player1
-    st.session_state['p2'] = player2
+    if singles:
+        st.session_state['p1'] = players[0]
+        st.session_state['p2'] = players[1]
+    else:
+        st.session_state['p1'] = players[0]
+        st.session_state['p2'] = players[1]
+        st.session_state['p3'] = players[2]
+        st.session_state['p4'] = players[3]
+        
     st.session_state['d1'] = delta1
     st.session_state['d2'] = delta2
 
-    return elo1_new, elo2_new, delta1, delta2
+    return elos_new, delta1, delta2
 
-def display_elo():
+def display_elo(singles=True):
 
     # Load ELO from file and format it correctly
 
@@ -131,11 +200,27 @@ def display_elo():
         delta1 = st.session_state['d1']
         delta2 = st.session_state['d2']
 
+        if not singles:
+            player3 = st.session_state['p3']
+            player4 = st.session_state['p4']
+
         # Calculate the previous ELO
 
+        players = [player1, player2]
+        if not singles:
+            players.extend([player3, player4])
+
         old_elo = elo_df.copy(deep=True)
-        old_elo.loc[old_elo.Name==player1, "ELO"] = old_elo.loc[old_elo.Name==player1, "ELO"].values[0] - delta1
-        old_elo.loc[old_elo.Name==player2, "ELO"] = old_elo.loc[old_elo.Name==player2, "ELO"].values[0] - delta2
+
+        if singles:
+            old_elo.loc[old_elo.Name==player1, "ELO"] = old_elo.loc[old_elo.Name==player1, "ELO"].values[0] - delta1
+            old_elo.loc[old_elo.Name==player2, "ELO"] = old_elo.loc[old_elo.Name==player2, "ELO"].values[0] - delta2
+        else:
+            old_elo.loc[old_elo.Name==player1, "ELO"] = old_elo.loc[old_elo.Name==player1, "ELO"].values[0] - delta1
+            old_elo.loc[old_elo.Name==player2, "ELO"] = old_elo.loc[old_elo.Name==player2, "ELO"].values[0] - delta1
+            old_elo.loc[old_elo.Name==player3, "ELO"] = old_elo.loc[old_elo.Name==player3, "ELO"].values[0] - delta2
+            old_elo.loc[old_elo.Name==player4, "ELO"] = old_elo.loc[old_elo.Name==player4, "ELO"].values[0] - delta2
+
         old_elo = old_elo.sort_values(by="ELO", ascending=False)
         old_elo.Position = range(1, len(old_elo)+1)
         
@@ -146,9 +231,18 @@ def display_elo():
         idx_change=[old_rank.index(x)-i for i, x in enumerate(new_rank)]
 
         # Format updated values
-        elo_df.loc[elo_df.Name==player1, "ELO"] = f"{elo_df.loc[elo_df.Name==player1, 'ELO'].values[0]:.2f} ({delta1:+.2f})"
-        elo_df.loc[elo_df.Name==player2, "ELO"] = f"{elo_df.loc[elo_df.Name==player2, 'ELO'].values[0]:.2f} ({delta2:+.2f})"
-        elo_df.loc[(elo_df.Name!=player1) & (elo_df.Name!=player2), "ELO"] = elo_df.loc[(elo_df.Name!=player1) & (elo_df.Name!=player2), "ELO"].apply(lambda x: f"{x:.2f}")
+
+        if singles:
+            elo_df.loc[elo_df.Name==player1, "ELO"] = f"{elo_df.loc[elo_df.Name==player1, 'ELO'].values[0]:.2f} ({delta1:+.2f})"
+            elo_df.loc[elo_df.Name==player2, "ELO"] = f"{elo_df.loc[elo_df.Name==player2, 'ELO'].values[0]:.2f} ({delta2:+.2f})"
+
+        else:
+            elo_df.loc[elo_df.Name==player1, "ELO"] = f"{elo_df.loc[elo_df.Name==player1, 'ELO'].values[0]:.2f} ({delta1:+.2f})"
+            elo_df.loc[elo_df.Name==player2, "ELO"] = f"{elo_df.loc[elo_df.Name==player2, 'ELO'].values[0]:.2f} ({delta1:+.2f})"
+            elo_df.loc[elo_df.Name==player3, "ELO"] = f"{elo_df.loc[elo_df.Name==player3, 'ELO'].values[0]:.2f} ({delta2:+.2f})"
+            elo_df.loc[elo_df.Name==player4, "ELO"] = f"{elo_df.loc[elo_df.Name==player4, 'ELO'].values[0]:.2f} ({delta2:+.2f})"
+
+        elo_df.loc[~elo_df.Name.isin(players), "ELO"] = elo_df.loc[~elo_df.Name.isin(players), "ELO"].apply(lambda x: f"{x:.2f}")
         for n,v in zip(new_rank, idx_change):
             if v != 0:
                 elo_df.loc[elo_df.Name==n, "Position"] = f"{elo_df.loc[elo_df.Name==n, 'Position'].values[0]} ({v:+d})"
@@ -179,25 +273,33 @@ def display_matches():
         df = pd.read_csv(matches_file)
     except FileNotFoundError:
         df = pd.DataFrame(columns=["MatchID", "Date","Player1", "Player2", 
-                                   "Set1", "Set2", "Set3", "Set4", "Set5"])
+                                       "Set1", "Set2", "Set3", "Set4", "Set5"])
+
     return df.tail(20)
 
-def elo_from_scratch():
-    matches = load_matches()
+def elo_from_scratch(singles=True):
+    matches = load_matches(singles)
     
-    f = open(elo_file, 'w')
-    f.write(json.dumps({}))
-    f.close()
+    if singles:
+        f = open(elo_file, 'w')
+    else:
+        f = open(elo_doubles_file, 'w')
+        f.write(json.dumps({}))
+        f.close()
 
-    for mid, p1, p2 in zip(
-        matches.MatchID.values,
-        matches.Player1.values,
-        matches.Player2.values,
-    ):
-        _,_,_,_ = update_elo(mid, p1, p2)
-
-def delete_and_reorder_matches(mid):
-    matches = load_matches()
-    matches = matches[matches.MatchID!=mid]
-    matches.MatchID = range(1,(len(matches))+1)
-    matches.to_csv(matches_file, index=False)
+    if singles:
+        for mid, p1, p2 in zip(
+            matches.MatchID.values,
+            matches.Player1.values,
+            matches.Player2.values,
+        ):
+            _,_,_,_ = update_elo(mid, [p1,p2])
+    else:
+        for mid, p11, p12, p21, p22 in zip(
+            matches.MatchID.values,
+            matches.Player11.values,
+            matches.Player12.values,
+            matches.Player21.values,
+            matches.Player22.values,
+        ):
+            _,_,_,_ = update_elo(mid, [p11,p12, p21, p22])

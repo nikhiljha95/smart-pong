@@ -4,16 +4,10 @@ from section_new_match import *
 from section_elo import *
 from section_correct_matches import *
 
-
-
-#############################################
-############### VISUALISATION ###############
-#############################################
-
-st.title("SmartPong")
+st.title("SmartPong - singles")
 
 st.write("## New match")
-insert_new_match()
+insert_new_match_doubles()
 
 st.write("## ELO ranking")
 show_elo()
@@ -23,4 +17,4 @@ st.dataframe(display_matches(), hide_index=True)
 
 
 st.write('## Correct match')
-correct_match()
+correct_match_doubles()

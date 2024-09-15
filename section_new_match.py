@@ -34,7 +34,54 @@ def insert_new_match():
                 's5': s5,
             }
             match_id = add_or_update_match(result)
-            elo1_new, elo2_new, delta1, delta2 = update_elo(match_id, p1, p2)
+            elo1_new, elo2_new, delta1, delta2 = update_elo(match_id, [p1, p2])
             st.success(f"Match {match_id} added")
             st.write(f"New ELO for {p1}: {elo1_new:.2f} ({delta1:+.2f})")
             st.write(f"New ELO for {p2}: {elo2_new:.2f} ({delta2:+.2f})")
+
+def insert_new_match_doubles():
+    with st.form("match_form"):
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            p11 = st.text_input("Winner 1")
+        with col2:
+            p12 = st.text_input("Winner 2")
+        with col3:
+            p21 = st.text_input("Loser 1")
+        with col4:
+            p22 = st.text_input("Loser 2")
+
+        cols1, cols2, cols3, cols4, cols5 = st.columns(5)
+        with cols1:
+            s1 = st.text_input("Set 1 score")
+        with cols2:
+            s2 = st.text_input("Set 2 score")
+        with cols3:
+            s3 = st.text_input("Set 3 score")
+        with cols4:
+            s4 = st.text_input("Set 4 score")
+        with cols5:
+            s5 = st.text_input("Set 5 score")
+            
+        submit = st.form_submit_button("Submit")
+
+        if submit:
+            result = {
+                'p11': p11,
+                'p12': p12,
+                'p21': p21,
+                'p22': p22,
+                's1': s1,
+                's2': s2,
+                's3': s3,
+                's4': s4,
+                's5': s5,
+            }
+            match_id = add_or_update_match(result, singles=False)
+            players=[p11, p12, p21, p22]
+            elo11_new, elo12_new, elo21_new, elo22_new, delta11, delta12, delta21, delta22 = update_elo(match_id, players)
+            st.success(f"Match {match_id} added")
+            st.write(f"New ELO for {p11}: {elo11_new:.2f} ({delta11:+.2f})")
+            st.write(f"New ELO for {p12}: {elo12_new:.2f} ({delta12:+.2f})")
+            st.write(f"New ELO for {p21}: {elo21_new:.2f} ({delta21:+.2f})")
+            st.write(f"New ELO for {p22}: {elo22_new:.2f} ({delta22:+.2f})")
