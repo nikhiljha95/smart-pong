@@ -39,8 +39,8 @@ def add_or_update_match(result, mid_update=-1, singles=True):
             else:
                 df = pd.DataFrame(
                     columns=["MatchID", "Date",
-                             "Player11", "Player12",
-                             "Player21", "Player22",
+                             "Winner1", "Winner2",
+                             "Loser1", "Loser2",
                             "Set1", "Set2", "Set3", "Set4", "Set5"])
                 
             df.MatchID.astype(np.int64)
@@ -64,10 +64,10 @@ def add_or_update_match(result, mid_update=-1, singles=True):
             df.loc[df.MatchID==np.int64(mid_update), "Set4"] = sets[3]
             df.loc[df.MatchID==np.int64(mid_update), "Set5"] = sets[4]
         else:
-            df.loc[df.MatchID==np.int64(mid_update), "Player11"] = player11
-            df.loc[df.MatchID==np.int64(mid_update), "Player12"] = player12
-            df.loc[df.MatchID==np.int64(mid_update), "Player21"] = player21
-            df.loc[df.MatchID==np.int64(mid_update), "Player22"] = player22
+            df.loc[df.MatchID==np.int64(mid_update), "Winner1"] = player11
+            df.loc[df.MatchID==np.int64(mid_update), "Winner2"] = player12
+            df.loc[df.MatchID==np.int64(mid_update), "Loser1"] = player21
+            df.loc[df.MatchID==np.int64(mid_update), "Loser2"] = player22
             df.loc[df.MatchID==np.int64(mid_update), "Set1"] = sets[0]
             df.loc[df.MatchID==np.int64(mid_update), "Set2"] = sets[1]
             df.loc[df.MatchID==np.int64(mid_update), "Set3"] = sets[2]
@@ -84,8 +84,8 @@ def add_or_update_match(result, mid_update=-1, singles=True):
                 [[match_id, date, player11, player12, player21, player22, *sets]],
                 columns=[
                     "MatchID", "Date",
-                    "Player11", "Player12",
-                    "Player21", "Player22",
+                    "Winner1", "Winner2",
+                    "Loser1", "Loser2",
                     "Set1", "Set2", "Set3", "Set4", "Set5"])
     
         df = pd.concat([df, new_match], ignore_index=True)
@@ -294,8 +294,8 @@ def display_matches(singles=True):
         else:
             df = pd.DataFrame(columns=[
                 "MatchID", "Date",
-                "Player11", "Player12",
-                "Player21", "Player22",
+                "Winner1", "Winner2",
+                "Loser1", "Loser2",
                 "Set1", "Set2", "Set3", "Set4", "Set5"])
 
     return df.tail(20)
@@ -320,9 +320,9 @@ def elo_from_scratch(singles=True):
     else:
         for mid, p11, p12, p21, p22 in zip(
             matches.MatchID.values,
-            matches.Player11.values,
-            matches.Player12.values,
-            matches.Player21.values,
-            matches.Player22.values,
+            matches.Winner1.values,
+            matches.Winner2.values,
+            matches.Loser1.values,
+            matches.Loser2.values,
         ):
             _,_,_ = update_elo(mid, [p11,p12, p21, p22], singles)
