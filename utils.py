@@ -26,9 +26,9 @@ def add_or_update_match(result, mid_update=-1):
         except FileNotFoundError:
             df = pd.DataFrame(
                 columns=["MatchID", "Date","Player1", "Player2", 
-                         "Set1", "Set2", "Set3", "Set4", "Set5"],
-                dtype=[np.int64, str, str, str,
-                       str, str, str, str, str])
+                         "Set1", "Set2", "Set3", "Set4", "Set5"])
+            df.MatchID.astype(np.int64)
+            df.Date.astype(str)
             match_id = 1
     
     player1, player2 = result['p1'], result['p2']
@@ -104,19 +104,57 @@ def update_elo(match_id, player1, player2):
     f.write(json.dumps(elo))
     f.close()
 
+    st.session_state['p1'] = player1
+    st.session_state['p2'] = player2
+    st.session_state['d1'] = delta1
+    st.session_state['d2'] = delta2
+
     return elo1_new, elo2_new, delta1, delta2
 
-def display_elo(player1=None, player2=None, delta1=None, delta2=None):
-    
-    # Create a df with position, name and ELO
+def display_elo():
+
+    # Load ELO from file and format it correctly
 
     elo_json = load_elo()
     elo_data = [(0, k, v[-1][1]) for k,v in elo_json.items()]
-    elo_df = pd.DataFrame(elo_data,columns=["Posizione", "Nome", "ELO"])
+    elo_df = pd.DataFrame(elo_data,columns=["Position", "Name", "ELO"])
     elo_df = elo_df.sort_values(by="ELO", ascending=False)
-    elo_df.Posizione = range(1, len(elo_df)+1)
+    elo_df.Position = range(1, len(elo_df)+1)
 
-    elo_df.ELO = elo_df.ELO.apply(lambda x: f"{x:.2f}")
+
+    # If a result has been inserted or update,
+    # show update in table
+    if "p1" in st.session_state:
+
+        player1 = st.session_state['p1']
+        player2 = st.session_state['p2']
+        delta1 = st.session_state['d1']
+        delta2 = st.session_state['d2']
+
+        # Calculate the previous ELO
+
+        old_elo = elo_df.copy(deep=True)
+        old_elo.loc[old_elo.Name==player1, "ELO"] = old_elo.loc[old_elo.Name==player1, "ELO"].values[0] - delta1
+        old_elo.loc[old_elo.Name==player2, "ELO"] = old_elo.loc[old_elo.Name==player2, "ELO"].values[0] - delta2
+        old_elo = old_elo.sort_values(by="ELO", ascending=False)
+        old_elo.Position = range(1, len(old_elo)+1)
+        
+        # Calculate differences between previous and current ELO
+
+        new_rank = list(elo_df.Name.values)
+        old_rank = list(old_elo.Name.values)
+        idx_change=[old_rank.index(x)-i for i, x in enumerate(new_rank)]
+
+        # Format updated values
+        elo_df.loc[elo_df.Name==player1, "ELO"] = f"{elo_df.loc[elo_df.Name==player1, 'ELO'].values[0]:.2f} ({delta1:+.2f})"
+        elo_df.loc[elo_df.Name==player2, "ELO"] = f"{elo_df.loc[elo_df.Name==player2, 'ELO'].values[0]:.2f} ({delta2:+.2f})"
+        elo_df.loc[(elo_df.Name!=player1) & (elo_df.Name!=player2), "ELO"] = elo_df.loc[(elo_df.Name!=player1) & (elo_df.Name!=player2), "ELO"].apply(lambda x: f"{x:.2f}")
+        for n,v in zip(new_rank, idx_change):
+            if v != 0:
+                elo_df.loc[elo_df.Name==n, "Position"] = f"{elo_df.loc[elo_df.Name==n, 'Position'].values[0]} ({v:+d})"
+
+    else:
+        elo_df.ELO = elo_df.ELO.apply(lambda x: f"{x:.2f}")
 
     return elo_df
 
