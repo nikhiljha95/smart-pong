@@ -79,9 +79,9 @@ def insert_new_match_doubles():
             }
             match_id = add_or_update_match(result, singles=False)
             players=[p11, p12, p21, p22]
-            elo11_new, elo12_new, elo21_new, elo22_new, delta11, delta12, delta21, delta22 = update_elo(match_id, players)
+            elos_new, delta1, delta2 = update_elo(match_id, players, singles=False)
             st.success(f"Match {match_id} added")
-            st.write(f"New ELO for {p11}: {elo11_new:.2f} ({delta11:+.2f})")
-            st.write(f"New ELO for {p12}: {elo12_new:.2f} ({delta12:+.2f})")
-            st.write(f"New ELO for {p21}: {elo21_new:.2f} ({delta21:+.2f})")
-            st.write(f"New ELO for {p22}: {elo22_new:.2f} ({delta22:+.2f})")
+            st.write(f"New ELO for {p11}: {elos_new[0]:.2f} ({delta1:+.2f})")
+            st.write(f"New ELO for {p12}: {elos_new[1]:.2f} ({delta1:+.2f})")
+            st.write(f"New ELO for {p21}: {elos_new[2]:.2f} ({delta2:+.2f})")
+            st.write(f"New ELO for {p22}: {elos_new[3]:.2f} ({delta2:+.2f})")

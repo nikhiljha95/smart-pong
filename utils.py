@@ -7,17 +7,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # File to store player ELOs
-elo_file = "elo_rankings.json"
-elo_doubles_file = "elo_rankings_doubles.json"
+elo_file = "files/elo_rankings.json"
+elo_doubles_file = "files/elo_rankings_doubles.json"
 # File to store the matches
-matches_file = "matches.csv"
-matches_doubles_file = "matches_doubles.csv"
+matches_file = "files/matches.csv"
+matches_doubles_file = "files/matches_doubles.csv"
 
 def add_or_update_match(result, mid_update=-1, singles=True):
 
 
     if mid_update > 0:
-        df = pd.read_csv(matches_file)
+        if singles:
+            df = pd.read_csv(matches_file)
+        else:
+            df = pd.read_csv(matches_doubles_file)
         match_id = str(mid_update)
 
     else:
@@ -86,7 +89,11 @@ def add_or_update_match(result, mid_update=-1, singles=True):
                     "Set1", "Set2", "Set3", "Set4", "Set5"])
     
         df = pd.concat([df, new_match], ignore_index=True)
-    df.to_csv(matches_file, index=False)
+    
+    if singles:
+        df.to_csv(matches_file, index=False)
+    else:
+        df.to_csv(matches_doubles_file, index=False)
 
     return match_id
 
@@ -154,6 +161,7 @@ def update_elo(match_id, players, singles=True):
         elo21_new = elos[2] + delta2
         elo22_new = elos[3] + delta2
         elos_new = [elo11_new, elo12_new,elo21_new, elo22_new]
+        print(elos_new)
         elo[players[0]].append((int(match_id), elo11_new))
         elo[players[1]].append((int(match_id), elo12_new))
         elo[players[2]].append((int(match_id), elo21_new))
@@ -184,7 +192,7 @@ def display_elo(singles=True):
 
     # Load ELO from file and format it correctly
 
-    elo_json = load_elo()
+    elo_json = load_elo(singles)
     elo_data = [(0, k, v[-1][1]) for k,v in elo_json.items()]
     elo_df = pd.DataFrame(elo_data,columns=["Position", "Name", "ELO"])
     elo_df = elo_df.sort_values(by="ELO", ascending=False)
@@ -197,12 +205,13 @@ def display_elo(singles=True):
 
         player1 = st.session_state['p1']
         player2 = st.session_state['p2']
-        delta1 = st.session_state['d1']
-        delta2 = st.session_state['d2']
 
         if not singles:
             player3 = st.session_state['p3']
             player4 = st.session_state['p4']
+        
+        delta1 = st.session_state['d1']
+        delta2 = st.session_state['d2']
 
         # Calculate the previous ELO
 
@@ -216,6 +225,9 @@ def display_elo(singles=True):
             old_elo.loc[old_elo.Name==player1, "ELO"] = old_elo.loc[old_elo.Name==player1, "ELO"].values[0] - delta1
             old_elo.loc[old_elo.Name==player2, "ELO"] = old_elo.loc[old_elo.Name==player2, "ELO"].values[0] - delta2
         else:
+
+            print(old_elo)
+
             old_elo.loc[old_elo.Name==player1, "ELO"] = old_elo.loc[old_elo.Name==player1, "ELO"].values[0] - delta1
             old_elo.loc[old_elo.Name==player2, "ELO"] = old_elo.loc[old_elo.Name==player2, "ELO"].values[0] - delta1
             old_elo.loc[old_elo.Name==player3, "ELO"] = old_elo.loc[old_elo.Name==player3, "ELO"].values[0] - delta2
@@ -243,6 +255,7 @@ def display_elo(singles=True):
             elo_df.loc[elo_df.Name==player4, "ELO"] = f"{elo_df.loc[elo_df.Name==player4, 'ELO'].values[0]:.2f} ({delta2:+.2f})"
 
         elo_df.loc[~elo_df.Name.isin(players), "ELO"] = elo_df.loc[~elo_df.Name.isin(players), "ELO"].apply(lambda x: f"{x:.2f}")
+        
         for n,v in zip(new_rank, idx_change):
             if v != 0:
                 elo_df.loc[elo_df.Name==n, "Position"] = f"{elo_df.loc[elo_df.Name==n, 'Position'].values[0]} ({v:+d})"
@@ -252,9 +265,9 @@ def display_elo(singles=True):
 
     return elo_df
 
-def plot_elo():
+def plot_elo(singles=True):
     fig, ax = plt.subplots()
-    elo_json = load_elo()
+    elo_json = load_elo(singles)
     elo_data = [(k, v[-1][1]) for k,v in elo_json.items()]
     sorted_players = [y[0] for y in sorted(elo_data, key=lambda x:x[1], reverse=True)]
     for p in sorted_players:
@@ -268,12 +281,22 @@ def plot_elo():
         ax.legend()
     return fig
 
-def display_matches():
+def display_matches(singles=True):
     try:
-        df = pd.read_csv(matches_file)
+        if singles:
+            df = pd.read_csv(matches_file)
+        else:
+            df = pd.read_csv(matches_doubles_file)
     except FileNotFoundError:
-        df = pd.DataFrame(columns=["MatchID", "Date","Player1", "Player2", 
-                                       "Set1", "Set2", "Set3", "Set4", "Set5"])
+        if singles:
+            df = pd.DataFrame(columns=["MatchID", "Date","Player1", "Player2", 
+                                        "Set1", "Set2", "Set3", "Set4", "Set5"])
+        else:
+            df = pd.DataFrame(columns=[
+                "MatchID", "Date",
+                "Player11", "Player12",
+                "Player21", "Player22",
+                "Set1", "Set2", "Set3", "Set4", "Set5"])
 
     return df.tail(20)
 
@@ -293,7 +316,7 @@ def elo_from_scratch(singles=True):
             matches.Player1.values,
             matches.Player2.values,
         ):
-            _,_,_,_ = update_elo(mid, [p1,p2])
+            _,_,_ = update_elo(mid, [p1,p2])
     else:
         for mid, p11, p12, p21, p22 in zip(
             matches.MatchID.values,
@@ -302,4 +325,4 @@ def elo_from_scratch(singles=True):
             matches.Player21.values,
             matches.Player22.values,
         ):
-            _,_,_,_ = update_elo(mid, [p11,p12, p21, p22])
+            _,_,_ = update_elo(mid, [p11,p12, p21, p22], singles)
