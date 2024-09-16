@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # File to store player ELOs
-elo_file = "files/elo_rankings.json"
-elo_doubles_file = "files/elo_rankings_doubles.json"
+elo_file = "elo_rankings.json"
+elo_doubles_file = "elo_rankings_doubles.json"
 # File to store the matches
-matches_file = "files/matches.csv"
-matches_doubles_file = "files/matches_doubles.csv"
+matches_file = "matches.csv"
+matches_doubles_file = "matches_doubles.csv"
 
 def add_or_update_match(result, mid_update=-1, singles=True):
 
