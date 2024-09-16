@@ -161,7 +161,7 @@ def update_elo(match_id, players, singles=True):
         elo21_new = elos[2] + delta2
         elo22_new = elos[3] + delta2
         elos_new = [elo11_new, elo12_new,elo21_new, elo22_new]
-        print(elos_new)
+
         elo[players[0]].append((int(match_id), elo11_new))
         elo[players[1]].append((int(match_id), elo12_new))
         elo[players[2]].append((int(match_id), elo21_new))
@@ -173,6 +173,7 @@ def update_elo(match_id, players, singles=True):
         f = open(elo_doubles_file, 'w')
     f.write(json.dumps(elo))
     f.close()
+
 
     if singles:
         st.session_state['p1'] = players[0]
@@ -206,7 +207,7 @@ def display_elo(singles=True):
         player1 = st.session_state['p1']
         player2 = st.session_state['p2']
 
-        if not singles:
+        if 'p3' in st.session_state:
             player3 = st.session_state['p3']
             player4 = st.session_state['p4']
         
@@ -263,6 +264,17 @@ def display_elo(singles=True):
     else:
         elo_df.ELO = elo_df.ELO.apply(lambda x: f"{x:.2f}")
 
+
+    if 'p1' in st.session_state:
+        del st.session_state['p1']
+        del st.session_state['p2']
+        del st.session_state['d1']
+        del st.session_state['d2']
+    
+    if 'p3' in st.session_state:
+        del st.session_state['p3']
+        del st.session_state['p4']
+
     return elo_df
 
 def plot_elo(singles=True):
@@ -307,8 +319,9 @@ def elo_from_scratch(singles=True):
         f = open(elo_file, 'w')
     else:
         f = open(elo_doubles_file, 'w')
-        f.write(json.dumps({}))
-        f.close()
+    
+    f.write(json.dumps({}))
+    f.close()
 
     if singles:
         for mid, p1, p2 in zip(
