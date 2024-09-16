@@ -34,10 +34,10 @@ def insert_new_match():
                 's5': s5,
             }
             match_id = add_or_update_match(result)
-            elo1_new, elo2_new, delta1, delta2 = update_elo(match_id, [p1, p2])
+            elos_new, delta1, delta2 = update_elo(match_id, [p1, p2])
             st.success(f"Match {match_id} added")
-            st.write(f"New ELO for {p1}: {elo1_new:.2f} ({delta1:+.2f})")
-            st.write(f"New ELO for {p2}: {elo2_new:.2f} ({delta2:+.2f})")
+            st.write(f"New ELO for {p1}: {elos_new[0]:.2f} ({delta1:+.2f})")
+            st.write(f"New ELO for {p2}: {elos_new[0]:.2f} ({delta2:+.2f})")
 
 def insert_new_match_doubles():
     with st.form("match_form"):
