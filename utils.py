@@ -285,9 +285,14 @@ def plot_elo(singles=True):
     for p in sorted_players:
         elo_trend = elo_json[p]
         elo_trend[0] = (elo_trend[1][0]-1, 500)
+
+        to_plot = [elo_trend[0], elo_trend[1]]
+        for i in range(2,len(elo_trend)):
+            to_plot.append((elo_trend[i][0]-1, elo_trend[i-1][1]))
+            to_plot.append((elo_trend[i][0], elo_trend[i][1]))
         ax.plot(
-            [x[0] for x in elo_trend],
-            [x[1] for x in elo_trend],
+            [x[0] for x in to_plot],
+            [x[1] for x in to_plot],
             label=p,
             )
         ax.legend()
